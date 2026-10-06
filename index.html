@@ -182,9 +182,13 @@ textarea{min-height:70px;resize:vertical}
 .tile.wide{grid-column:span 2}
 .pareto{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px 28px}
 .pblock h3{margin:0 0 6px;font-size:14px}
-.prow{display:grid;grid-template-columns:minmax(90px,30%) 1fr 94px 50px;gap:8px;align-items:center;padding:5px 0;border-top:1px solid var(--line);font-size:13.5px}
+.prow{display:grid;grid-template-columns:1fr 94px 46px 58px;gap:8px;align-items:center;padding:5px 0;border-top:1px solid var(--line);font-size:13.5px}
 .prow.phead{border-top:0;padding:0;font-size:11.5px;color:var(--muted);white-space:nowrap}
-.prow.phead span:last-child,.prow .pc{text-align:right}
+.prow.phead span,.prow .pc,.prow .ps{text-align:right}
+.prow .pbar,.prow .pbar0{grid-column:1/-1;grid-row:2}
+.prow .pbar0{display:none}
+.prow .ps{font-size:13px}
+@media(min-width:760px){.prow{grid-template-columns:minmax(90px,28%) 1fr 94px 46px 58px}.prow .pbar,.prow .pbar0{grid-column:auto;grid-row:auto;display:block}}
 .prow .pl{min-width:0;overflow-wrap:anywhere}
 .prow .pl small{display:block;color:var(--muted);font-size:11.5px}
 .prow .pl .orig{display:block}
@@ -247,7 +251,7 @@ select.asg.set{color:var(--ink);border-color:var(--accent);background:var(--acce
   <section id="tab-settings" hidden></section>
 </main>
 <div id="toast" hidden></div>
-<div class="ver">Phiên bản 06/10/2026 10:00</div>
+<div class="ver">Phiên bản 06/10/2026 10:15</div>
 
 <script>
 (function(){
@@ -324,6 +328,7 @@ const ROLE_LABEL = {admin:"Admin", leader:"Tổ trưởng", worker:"Công nhân"
 
 /* Japanese UI text, keyed by the Vietnamese original */
 const JA = {
+"Tỷ lệ":"割合","Cộng dồn":"累積","Tỷ lệ: phần của riêng dòng đó. Cộng dồn: cộng tỷ lệ từ dòng đầu xuống đến dòng đó (dòng cuối luôn là 100%).":"割合：その項目だけの比率。累積：上の行から順に足した比率（最後の行は必ず100%）。",
 "Thống kê Pareto":"パレート分析","Nguyên nhân hàng loại 2":"B品の原因","Hạng mục kiểm không đạt":"不合格の点検項目","Tích luỹ":"累積","{n} báo cáo":"{n}件","{n} lần":"{n}回","Tháng này chưa có hàng loại 2.":"今月はB品の報告がありません。","Tháng này không có lần kiểm nào không đạt.":"今月は不合格の点検がありません。",
 "Màu đậm: nhóm chiếm 80% đầu. Báo cáo có nhiều nguyên nhân thì số lượng được chia đều cho từng nguyên nhân.":"濃い色：累積80%までの上位項目。1件の報告に原因が複数ある場合、数量は各原因に均等に配分しています。",
 "Hôm nay là ngày nghỉ. Không cần báo cáo.":"本日は休日です。報告は不要です。","Đã gửi đủ {n} máy":"{n}台すべて送信済み","Đã quá hạn 16:30, còn {n} máy chưa gửi":"16:30の期限超過：未送信 {n}台","Còn {n} máy chưa gửi":"未送信 {n}台","Hàng loại 2":"B品",
@@ -1213,14 +1218,14 @@ function paretoHtml(r){
   const cm = new Map(); r.daily.forEach(d => { const cs = (d.causes||[]).concat(d.other ? [d.other] : []); if(!cs.length || !(d.b2Total>0)) return; cs.forEach(x => { const o = cm.get(x) || {q:0, n:0}; o.q += d.b2Total/cs.length; o.n++; cm.set(x, o); }); });
   const im = new Map(); r.checks.forEach(c => itemsFor(c.shift).forEach(i => { if(c[i.k]==="NG"){ const k = (S.lang==="ja" ? i.sj : i.short) || i.vi; im.set(k, (im.get(k)||0)+1); } }));
   const block = (title, rows, val, extra, empty) => { const tot = rows.reduce((a,x) => a+x.v, 0), max = rows.length ? rows[0].v : 0; let cum = 0, vital = true;
-    return '<div class="pblock"><h3>'+T(title)+'</h3>'+(rows.length ? '<div class="prow phead"><span></span><span></span><span></span><span>'+T("Tích luỹ")+'</span></div>'+rows.map(x => { const dark = vital; cum += x.v; if(cum/tot>=0.8) vital = false;
-        return '<div class="prow'+(dark?" vital":"")+'"><span class="pl">'+x.label+(extra ? '<small>'+extra(x)+'</small>' : '')+'</span><span class="pbar"><i style="width:'+Math.max(2, Math.round(x.v/max*100))+'%"></i></span><span class="pv mono">'+val(x)+'</span><span class="pc mono">'+Math.round(cum/tot*100)+'%</span></div>'; }).join("") : '<div class="notice">'+T(empty)+'</div>')+'</div>'; };
+    return '<div class="pblock"><h3>'+T(title)+'</h3>'+(rows.length ? '<div class="prow phead"><span></span><span class="pbar0"></span><span></span><span>'+T("Tỷ lệ")+'</span><span>'+T("Cộng dồn")+'</span></div>'+rows.map(x => { const dark = vital; cum += x.v; if(cum/tot>=0.8) vital = false;
+        return '<div class="prow'+(dark?" vital":"")+'"><span class="pl">'+x.label+(extra ? '<small>'+extra(x)+'</small>' : '')+'</span><span class="pbar"><i style="width:'+Math.max(2, Math.round(x.v/max*100))+'%"></i></span><span class="pv mono">'+val(x)+'</span><span class="ps mono">'+Math.round(x.v/tot*100)+'%</span><span class="pc mono">'+Math.round(cum/tot*100)+'%</span></div>'; }).join("") : '<div class="notice">'+T(empty)+'</div>')+'</div>'; };
   const cr = [...cm.entries()].map(([k,o]) => ({label:txt(k), v:o.q, n:o.n})).sort((a,b) => b.v-a.v || b.n-a.n);
   const ir = [...im.entries()].map(([k,n]) => ({label:esc(k), v:n})).sort((a,b) => b.v-a.v);
   return '<div class="panel"><h2>'+T("Thống kê Pareto")+'</h2><div class="pareto">'
     + block("Nguyên nhân hàng loại 2", cr, x => qtyText(Math.round(x.v)), x => T("{n} báo cáo",{n:x.n}), "Tháng này chưa có hàng loại 2.")
     + block("Hạng mục kiểm không đạt", ir, x => T("{n} lần",{n:x.v}), null, "Tháng này không có lần kiểm nào không đạt.")
-    + '</div><div class="sub">'+T("Màu đậm: nhóm chiếm 80% đầu. Báo cáo có nhiều nguyên nhân thì số lượng được chia đều cho từng nguyên nhân.")+'</div></div>';
+    + '</div><div class="sub">'+T("Tỷ lệ: phần của riêng dòng đó. Cộng dồn: cộng tỷ lệ từ dòng đầu xuống đến dòng đó (dòng cuối luôn là 100%).")+'<br>'+T("Màu đậm: nhóm chiếm 80% đầu. Báo cáo có nhiều nguyên nhân thì số lượng được chia đều cho từng nguyên nhân.")+'</div></div>';
 }
 function b2All(list){ return qtyText(list.reduce((a,d) => a+(d.b2Total||0), 0)); }
 function reportStats(){
