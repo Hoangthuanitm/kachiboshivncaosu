@@ -178,6 +178,22 @@ textarea{min-height:70px;resize:vertical}
 .tile{border:1px solid var(--line);border-radius:8px;padding:10px 12px}
 .tile b{display:block;font-family:var(--mono);font-size:21px;font-weight:500;font-variant-numeric:tabular-nums;white-space:nowrap;letter-spacing:-.02em}
 .tile span{font-size:12.5px;color:var(--muted)}
+.tile{min-width:0}
+.tile.wide{grid-column:span 2}
+.pareto{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px 28px}
+.pblock h3{margin:0 0 6px;font-size:14px}
+.prow{display:grid;grid-template-columns:minmax(90px,30%) 1fr 94px 50px;gap:8px;align-items:center;padding:5px 0;border-top:1px solid var(--line);font-size:13.5px}
+.prow.phead{border-top:0;padding:0;font-size:11.5px;color:var(--muted);white-space:nowrap}
+.prow.phead span:last-child,.prow .pc{text-align:right}
+.prow .pl{min-width:0;overflow-wrap:anywhere}
+.prow .pl small{display:block;color:var(--muted);font-size:11.5px}
+.prow .pl .orig{display:block}
+.prow .pbar{height:14px;background:var(--bg);border-radius:3px;overflow:hidden}
+.prow .pbar i{display:block;height:100%;background:var(--muted);opacity:.45;border-radius:3px}
+.prow.vital .pbar i{background:var(--accent);opacity:1}
+.prow .pv{white-space:nowrap;text-align:right;font-size:13px}
+.prow .pc{color:var(--muted);font-size:12.5px}
+.prow.vital .pc{color:var(--ink);font-weight:600}
 .scroll{overflow-x:auto}
 table{border-collapse:collapse;width:100%;font-size:13.5px}
 th,td{padding:7px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
@@ -231,7 +247,7 @@ select.asg.set{color:var(--ink);border-color:var(--accent);background:var(--acce
   <section id="tab-settings" hidden></section>
 </main>
 <div id="toast" hidden></div>
-<div class="ver">Phiên bản 06/10/2026 09:10</div>
+<div class="ver">Phiên bản 06/10/2026 10:00</div>
 
 <script>
 (function(){
@@ -308,6 +324,8 @@ const ROLE_LABEL = {admin:"Admin", leader:"Tổ trưởng", worker:"Công nhân"
 
 /* Japanese UI text, keyed by the Vietnamese original */
 const JA = {
+"Thống kê Pareto":"パレート分析","Nguyên nhân hàng loại 2":"B品の原因","Hạng mục kiểm không đạt":"不合格の点検項目","Tích luỹ":"累積","{n} báo cáo":"{n}件","{n} lần":"{n}回","Tháng này chưa có hàng loại 2.":"今月はB品の報告がありません。","Tháng này không có lần kiểm nào không đạt.":"今月は不合格の点検がありません。",
+"Màu đậm: nhóm chiếm 80% đầu. Báo cáo có nhiều nguyên nhân thì số lượng được chia đều cho từng nguyên nhân.":"濃い色：累積80%までの上位項目。1件の報告に原因が複数ある場合、数量は各原因に均等に配分しています。",
 "Hôm nay là ngày nghỉ. Không cần báo cáo.":"本日は休日です。報告は不要です。","Đã gửi đủ {n} máy":"{n}台すべて送信済み","Đã quá hạn 16:30, còn {n} máy chưa gửi":"16:30の期限超過：未送信 {n}台","Còn {n} máy chưa gửi":"未送信 {n}台","Hàng loại 2":"B品",
 "Đã gửi lúc {t} bởi {n}. Chỉ sửa được trong hôm nay; mỗi lần sửa đều được ghi lại.":"{t} に {n} が送信しました。修正は当日のみ可能で、修正のたびに履歴が残ります。","Ghi số lượng và chọn nguyên nhân. Không có hàng loại 2 thì để trống và bấm gửi.":"数量を入力し、原因を選んでください。B品がなければ空欄のまま送信します。",
 "Gửi lại bản sửa":"修正を再送信","Gửi báo cáo cuối ngày":"終業報告を送信","Tổ trưởng ghi và gửi trước 16:30. Mỗi máy một báo cáo.":"班長が16:30までに記入・送信します。機械ごとに1件。","Chưa gửi":"未送信","Loại 2:":"B品：","Báo cáo cuối ngày":"終業時の報告",
@@ -1191,6 +1209,19 @@ function loadReport(){
     S.db.collection("dappr").where("month","==",ym).limit(1000).onSnapshot(q => { if(r.sub!==ym) return; r.dapprs = new Map(q.docs.map(d => [d.id, d.data()])); done(); }, fail)
   ];
 }
+function paretoHtml(r){
+  const cm = new Map(); r.daily.forEach(d => { const cs = (d.causes||[]).concat(d.other ? [d.other] : []); if(!cs.length || !(d.b2Total>0)) return; cs.forEach(x => { const o = cm.get(x) || {q:0, n:0}; o.q += d.b2Total/cs.length; o.n++; cm.set(x, o); }); });
+  const im = new Map(); r.checks.forEach(c => itemsFor(c.shift).forEach(i => { if(c[i.k]==="NG"){ const k = (S.lang==="ja" ? i.sj : i.short) || i.vi; im.set(k, (im.get(k)||0)+1); } }));
+  const block = (title, rows, val, extra, empty) => { const tot = rows.reduce((a,x) => a+x.v, 0), max = rows.length ? rows[0].v : 0; let cum = 0, vital = true;
+    return '<div class="pblock"><h3>'+T(title)+'</h3>'+(rows.length ? '<div class="prow phead"><span></span><span></span><span></span><span>'+T("Tích luỹ")+'</span></div>'+rows.map(x => { const dark = vital; cum += x.v; if(cum/tot>=0.8) vital = false;
+        return '<div class="prow'+(dark?" vital":"")+'"><span class="pl">'+x.label+(extra ? '<small>'+extra(x)+'</small>' : '')+'</span><span class="pbar"><i style="width:'+Math.max(2, Math.round(x.v/max*100))+'%"></i></span><span class="pv mono">'+val(x)+'</span><span class="pc mono">'+Math.round(cum/tot*100)+'%</span></div>'; }).join("") : '<div class="notice">'+T(empty)+'</div>')+'</div>'; };
+  const cr = [...cm.entries()].map(([k,o]) => ({label:txt(k), v:o.q, n:o.n})).sort((a,b) => b.v-a.v || b.n-a.n);
+  const ir = [...im.entries()].map(([k,n]) => ({label:esc(k), v:n})).sort((a,b) => b.v-a.v);
+  return '<div class="panel"><h2>'+T("Thống kê Pareto")+'</h2><div class="pareto">'
+    + block("Nguyên nhân hàng loại 2", cr, x => qtyText(Math.round(x.v)), x => T("{n} báo cáo",{n:x.n}), "Tháng này chưa có hàng loại 2.")
+    + block("Hạng mục kiểm không đạt", ir, x => T("{n} lần",{n:x.v}), null, "Tháng này không có lần kiểm nào không đạt.")
+    + '</div><div class="sub">'+T("Màu đậm: nhóm chiếm 80% đầu. Báo cáo có nhiều nguyên nhân thì số lượng được chia đều cho từng nguyên nhân.")+'</div></div>';
+}
 function b2All(list){ return qtyText(list.reduce((a,d) => a+(d.b2Total||0), 0)); }
 function reportStats(){
   const r = S.report, t = {total:r.checks.length, pass:0, fail:0, ontime:0, late:0, early:0, approved:0, pending:0, returned:0};
@@ -1210,7 +1241,8 @@ function renderReport(){
   let h = '<div class="panel"><div class="row between"><label class="f" for="month">'+T("Tháng báo cáo")+'<input type="month" id="month" value="'+r.month+'"></label>'
     +'<div class="row">'+(S.downloads ? '<button class="btn pri sm" id="xlsx"'+(t.total||r.daily.length?"":" disabled")+'>'+T("Xuất Excel")+'</button>' : '')+'</div></div>'
     +(S.downloads ? '' : '<div class="notice">'+T("Trình xem này không cho tải file. Hãy mở trang trên trình duyệt máy tính để xuất Excel.")+'</div>')
-    +'<div class="tiles">'+tile(t.total,"Lần kiểm đã ghi")+tile(t.pass,"Đạt")+tile(t.fail,"Không đạt","ng")+tile(t.ontime,"Đúng giờ")+tile(t.late,"Trễ giờ","ng")+tile(t.pending+t.returned,"Chưa duyệt xong","wait")+tile(b2All(r.daily),"Hàng loại 2","ng")+'</div></div>';
+    +'<div class="tiles">'+tile(t.total,"Lần kiểm đã ghi")+tile(t.pass,"Đạt")+tile(t.fail,"Không đạt","ng")+tile(t.ontime,"Đúng giờ")+tile(t.late,"Trễ giờ","ng")+tile(t.pending+t.returned,"Chưa duyệt xong","wait")+tile(b2All(r.daily),"Hàng loại 2","ng").replace('class="tile"','class="tile wide"')+'</div></div>';
+  if(r.loaded) h += paretoHtml(r);
   h += '<div class="panel"><h2>'+T("Bảng theo ngày")+'</h2>';
   if(!r.loaded) h += '<div class="notice">'+T("Đang tải dữ liệu tháng…")+'</div>';
   else if(!t.total) h += '<div class="notice">'+T("Tháng này chưa có lần kiểm nào được ghi.")+'</div>';
