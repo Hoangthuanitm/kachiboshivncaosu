@@ -601,9 +601,9 @@ const DOW = {vi:["Chủ nhật","Thứ hai","Thứ ba","Thứ tư","Thứ năm",
 const DEFAULT_TIMES = {S:{from:"06:00", due:"07:30"}, QS:{from:"06:30", due:"08:10"}, C:{from:"12:00", due:"13:00"}, QC:{from:"12:00", due:"13:20"}};
 const DEFAULT_MACHINES = [{id:"m1", name:"Cao su 1"}, {id:"m2", name:"Cao su 2"}, {id:"m3", name:"Cao su 3"}];
 /* Chỉ tổ trưởng duyệt phiếu. Admin phân công, quản lý tài khoản, xem tổng hợp và cài đặt. */
-const TABS = {admin:["approve","accounts","report","settings"], manager:["approve","daily","accounts","report","settings"], leader:["approve","daily","incident","report","times"], device:["check"], worker:[]};
+const TABS = {admin:["approve","accounts","report","settings"], manager:["approve","daily","accounts","report","settings"], leader:["approve","daily","incident","report","times"], device:["check"], worker:[], director:["approve","report"]};
 const TAB_LABEL = {daily:"Báo cáo sản xuất", check:"Kiểm máy", approve:"Duyệt", assign:"Phân công", accounts:"Tài khoản", report:"Tổng hợp tháng", settings:"Cài đặt", times:"Giờ quy định", incident:"Báo cáo sự cố"};
-const ROLE_LABEL = {admin:"Admin", manager:"Quản đốc", leader:"Tổ trưởng", device:"iPad của máy", worker:"Công nhân"};
+const ROLE_LABEL = {admin:"Admin", manager:"Quản đốc", leader:"Tổ trưởng", device:"iPad của máy", worker:"Công nhân", director:"Giám đốc"};
 
 /* Japanese UI text, keyed by the Vietnamese original */
 const JA = {
@@ -653,7 +653,7 @@ const JA = {
 "Đã gửi báo cáo cuối ngày.":"終業報告を送信しました。","Đã gửi bản sửa. Lần sửa đã được ghi lại.":"修正を送信しました。修正履歴に記録されました。","Đã gửi. Báo cáo trễ {n} phút so với hạn 16:30.":"送信しました。16:30の期限より{n}分遅れです。","Giờ gửi":"送信時刻","Đúng hạn 16:30":"16:30期限",
 "Danh mục kiểm tra máy in sấy PVC":"ゴム加工機のチェック項目","Máy in sấy PVC":"ゴム加工機",
 "Kiểm máy":"点検","Duyệt":"承認","Tài khoản":"アカウント","Tổng hợp tháng":"月次集計","Cài đặt":"設定",
-"Admin":"管理者","Tổ trưởng":"班長","Công nhân":"作業者","Chủ trang":"ページ所有者",
+"Admin":"管理者","Giám đốc":"社長","Tổ trưởng":"班長","Công nhân":"作業者","Chủ trang":"ページ所有者",
 "Sáng":"午前","Chiều":"午後","Đăng xuất":"ログアウト","Đăng nhập":"ログイン",
 "Đạt":"合格","Không đạt":"不合格","Đã duyệt":"承認済み","Trả lại – kiểm lại":"差し戻し・再点検","Chờ duyệt":"承認待ち",
 "Đúng giờ":"時間内","Trễ {n} phút":"{n}分遅れ","Kiểm quá sớm":"早すぎる点検",
@@ -1011,8 +1011,8 @@ function render(){
   $("#who").innerHTML = (S.me ? '<span class="role">'+esc(meName())+' · '+roleL(S.me.role)+'</span>' : '')+(S.me && S.me.role==="device" && S.op ? '<span class="role op">'+esc(S.op.name)+'</span>' : '')
     +'<button class="btn sm" id="langBtn" aria-label="Đổi ngôn ngữ / 言語切替">'+(ja?"Tiếng Việt":"日本語")+'</button>'
     +(S.me ? '<button class="btn sm" id="logout">'+T("Đăng xuất")+'</button>' : '');
-  const n = S.me && isDevice() ? devApList().length : S.me && S.me.role!=="worker" ? (isFinal() ? fwaitList().length+mgrPending().length : pendingList().length) : 0; const dn = S.me && S.me.role==="leader" ? dailyMissing() : 0, inN = S.me && S.me.role==="leader" ? incOpen().length : 0;
-  $("#tabs").innerHTML = tabs.map(t => '<button role="tab" data-tab="'+t+'" aria-selected="'+(S.tab===t)+'">'+T(t==="approve" && S.me.role==="admin" ? "Theo dõi duyệt" : t==="daily" && S.me.role==="manager" ? "Báo cáo bổ sung" : TAB_LABEL[t])+(t==="approve"&&n?'<span class="badge">'+n+'</span>':t==="daily"&&dn?'<span class="badge">'+dn+'</span>':t==="incident"&&inN?'<span class="badge">'+inN+'</span>':'')+'</button>').join("");
+  const n = S.me && isDevice() ? devApList().length : S.me && S.me.role!=="worker" && S.me.role!=="director" ? (isFinal() ? fwaitList().length+mgrPending().length : pendingList().length) : 0; const dn = S.me && S.me.role==="leader" ? dailyMissing() : 0, inN = S.me && S.me.role==="leader" ? incOpen().length : 0;
+  $("#tabs").innerHTML = tabs.map(t => '<button role="tab" data-tab="'+t+'" aria-selected="'+(S.tab===t)+'">'+T(t==="approve" && (S.me.role==="admin" || S.me.role==="director") ? "Theo dõi duyệt" : t==="daily" && S.me.role==="manager" ? "Báo cáo bổ sung" : TAB_LABEL[t])+(t==="approve"&&n?'<span class="badge">'+n+'</span>':t==="daily"&&dn?'<span class="badge">'+dn+'</span>':t==="incident"&&inN?'<span class="badge">'+inN+'</span>':'')+'</button>').join("");
   $("#login").hidden = !!S.me;
   ["check","daily","approve","assign","accounts","report","settings","times","incident"].forEach(t => { $("#tab-"+t).hidden = !S.me || S.tab!==t; });
   /* iPad: Báo cáo sản xuất hiện ngay dưới phần Kiểm máy khi chọn tab nhỏ "Báo cáo sản xuất" */
@@ -2048,15 +2048,15 @@ $("#tab-daily").addEventListener("click", async e => { const l = e.target.closes
   const b = e.target.closest("[data-phload]"); if(!b) return; const c = S.checks.get(b.dataset.phload); if(!c) return;
   b.disabled = true; b.textContent = T("Đang tải…"); await loadPhotos(checkPhotos(b.dataset.phload, c).map(p => p.pid)); renderDaily(); });
 $("#tab-approve").addEventListener("click", e => { const b = e.target.closest("[data-dayph]"); if(!b) return; S.phOpen = S.phOpen || new Set(); S.phOpen.add(b.dataset.dayph); b.disabled = true; renderApprove(); });
-function renderWatch(){ const box = $("#tab-approve");
+function renderWatch(){ const box = $("#tab-approve"), ro = S.me.role==="director";
   const cs = [...S.checks.entries()].sort((a,b) => a[1].date!==b[1].date ? (a[1].date<b[1].date?1:-1) : (a[1].machineId||"").localeCompare(b[1].machineId||"") || SLOTS.indexOf(a[1].shift)-SLOTS.indexOf(b[1].shift)).slice(0,80);
   const ds = [...S.daily.entries()].filter(([,d]) => dLines(d).length).sort((a,b) => a[0]<b[0]?1:-1).slice(0,40);
   const npend = cs.filter(([id,c]) => stateOf(c,S.apprs.get(id))==="pending").length, dpend = ds.filter(([k,d]) => dState(d,S.dapprs.get(k))!=="approved").length;
   const fw = fwaitList().filter(([,c]) => c.date!==S.today), mp = mgrPending();
-  box.innerHTML = todayBoard({mgr:true})
-    +'<div class="panel"><h2>'+T("Phiếu kiểm chờ quản đốc duyệt ({n})",{n:fw.length})+'</h2><div class="sub">'+T("Admin có thể duyệt thay quản đốc. Người duyệt được ghi là Admin.")+' '+T("Phiếu hôm nay duyệt ở bảng Tiến độ hôm nay.")+'</div>'+(fw.length ? dayTable(fw, {mgr:true}) : '<div class="notice">'+T("Không có phiếu kiểm nào chờ quản đốc duyệt.")+'</div>')+'</div>'
-    +'<div class="panel"><h2>'+T("Báo cáo sản xuất chờ quản đốc duyệt ({n})",{n:mp.length})+'</h2>'+(mp.length ? mp.map(([k,d]) => mgrDailyCard(k, d, true)).join("") : '<div class="notice">'+T("Không có báo cáo nào chờ duyệt. Báo cáo hiện ở đây sau khi tổ trưởng xác nhận.")+'</div>')+'</div>'
-    +'<div class="panel"><h2>'+T("Phiếu kiểm máy")+'</h2><div class="sub">'+T("Tổ trưởng duyệt. Admin chỉ theo dõi.")+' '+T("Chưa duyệt: {n}",{n:npend})+'</div>'
+  box.innerHTML = todayBoard({mgr:!ro})
+    +(ro ? '' : '<div class="panel"><h2>'+T("Phiếu kiểm chờ quản đốc duyệt ({n})",{n:fw.length})+'</h2><div class="sub">'+T("Admin có thể duyệt thay quản đốc. Người duyệt được ghi là Admin.")+' '+T("Phiếu hôm nay duyệt ở bảng Tiến độ hôm nay.")+'</div>'+(fw.length ? dayTable(fw, {mgr:true}) : '<div class="notice">'+T("Không có phiếu kiểm nào chờ quản đốc duyệt.")+'</div>')+'</div>')
+    +(ro ? '' : '<div class="panel"><h2>'+T("Báo cáo sản xuất chờ quản đốc duyệt ({n})",{n:mp.length})+'</h2>'+(mp.length ? mp.map(([k,d]) => mgrDailyCard(k, d, true)).join("") : '<div class="notice">'+T("Không có báo cáo nào chờ duyệt. Báo cáo hiện ở đây sau khi tổ trưởng xác nhận.")+'</div>')+'</div>')
+    +'<div class="panel"><h2>'+T("Phiếu kiểm máy")+'</h2><div class="sub">'+(ro ? '' : T("Tổ trưởng duyệt. Admin chỉ theo dõi.")+' ')+T("Chưa duyệt: {n}",{n:npend})+'</div>'
     +(cs.length ? dayTable(cs) : '<div class="notice">'+T("Chưa có phiếu kiểm nào.")+'</div>')+'</div>'
     +'<div class="panel"><h2>'+T("Báo cáo sản xuất")+'</h2><div class="sub">'+T("Tổ trưởng xác nhận, quản đốc phê duyệt.")+' '+T("Chưa duyệt xong: {n}",{n:dpend})+'</div>'
     +(ds.length ? '<div class="scroll"><table><tr><th>'+T("Ngày")+'</th>'+(multi()?'<th>'+T("Máy")+'</th>':'')+'<th>'+T("Sản lượng thực tế")+'</th><th>'+T("Số lượng loại 2")+'</th><th>'+T("Tỷ lệ loại 2:").replace(":","")+'</th><th>'+T("Trạng thái")+'</th><th>'+T("Tổ trưởng")+'</th><th>'+T("Quản đốc")+'</th></tr>'
@@ -2075,7 +2075,7 @@ function todayBoard(opt){ const ms = S.cfg.machines.filter(m => mineM(m.id)); if
   return head+'<div class="sub">'+T("Máy hiện ra ngay khi công nhân lưu phiếu kiểm đầu tiên, không cần chờ tổ trưởng duyệt.")+'</div><div class="row" style="flex-wrap:wrap;gap:6px;margin:6px 0">'+sum+'</div>'+dayTable(rows, opt)+'</div>'; }
 function renderApprove(){
   if(isDevice()){ $("#tab-approve").innerHTML = devApPanel(); return; }
-  if(S.me.role==="admin") return renderWatch();
+  if(S.me.role==="admin" || S.me.role==="director") return renderWatch();
   const box = $("#tab-approve");
   const ro = S.me.role!=="leader";   /* chỉ tổ trưởng duyệt; admin chỉ xem kết quả */
   const pend = pendingList(), okN = pend.filter(([,c]) => isPass(c)).length;
@@ -2167,15 +2167,15 @@ function accForm(id){
     +'<div class="row">'+(isNew ? '<label class="f grow">'+T("ID đăng nhập")+'<input type="text" id="accId" placeholder="'+T("ví dụ: phuc01")+'" autocapitalize="none"></label>' : '')
     +'<label class="f grow">'+T("Họ tên")+'<input type="text" id="accName" value="'+esc(a.name)+'"></label></div>'
     +'<div class="row"><label class="f grow">'+T(admin ? (isNew?"Mật khẩu (công nhân: mã PIN 4 số, bỏ trống = 1234)":"Mật khẩu hoặc PIN mới (bỏ trống nếu giữ nguyên)") : (isNew?"Mã PIN 4 số (bỏ trống = 1234)":"Mã PIN mới (bỏ trống nếu giữ nguyên)"))+'<input type="text" id="accPw" autocomplete="off"'+(admin ? ' placeholder="'+T("ít nhất 4 ký tự")+'"' : ' inputmode="numeric" maxlength="4"')+'></label>'
-    +(admin ? '<label class="f grow">'+T("Vai trò")+'<select id="accRole">'+["worker","device","leader","manager","admin"].filter(r => r!=="admin" || S.me.role==="admin" || a.role==="admin").map(r => '<option value="'+r+'"'+(a.role===r?" selected":"")+'>'+roleL(r)+'</option>').join("")+'</select></label>' : '')+'</div>'
+    +(admin ? '<label class="f grow">'+T("Vai trò")+'<select id="accRole">'+["worker","device","leader","manager","director","admin"].filter(r => (r!=="admin" && r!=="director") || S.me.role==="admin" || a.role===r).map(r => '<option value="'+r+'"'+(a.role===r?" selected":"")+'>'+roleL(r)+'</option>').join("")+'</select></label>' : '')+'</div>'
     +(admin ? '<label class="f" id="accMachWrap"'+(a.role==="device" ? '' : ' hidden')+'>'+T("Máy của iPad này")+'<select id="accMachine"><option value="">'+T("Chọn máy")+'</option>'+S.cfg.machines.map(m => '<option value="'+esc(m.id)+'"'+(a.machineId===m.id?" selected":"")+'>'+esc(mName(m.name))+'</option>').join("")+'</select></label>' : '')
     +(admin ? '<div class="f" id="accLeadWrap"'+(a.role==="leader" ? '' : ' hidden')+'><span>'+T("Máy phụ trách (tổ trưởng chỉ nhận và duyệt phiếu của các máy này)")+'</span><div class="checks">'+S.cfg.machines.map(m => '<label><input type="checkbox" data-accm="'+esc(m.id)+'"'+((a.machines||[]).includes(m.id)?" checked":"")+'>'+esc(mName(m.name))+'</label>').join("")+'</div></div>' : '')
     +(isNew ? '' : '<div class="checks"><label><input type="checkbox" id="accActive"'+(a.active?" checked":"")+'>'+T("Tài khoản đang hoạt động")+'</label></div>')
     +'<div class="row"><button class="btn pri sm" data-acc="save">'+T("Lưu tài khoản")+'</button><button class="btn sm" data-acc="cancel">'+T("Huỷ")+'</button></div></div>';
 }
 function renderAccounts(){
-  const box = $("#tab-accounts"), admin = isMgr(), order = {admin:0, manager:1, leader:2, device:3, worker:4};
-  const list = [...S.accounts.entries()].filter(([,a]) => (admin || a.role==="worker") && (a.role!=="admin" || S.me.role==="admin")).sort((x,y) => order[x[1].role]-order[y[1].role] || x[1].name.localeCompare(y[1].name));
+  const box = $("#tab-accounts"), admin = isMgr(), order = {admin:0, director:1, manager:2, leader:3, device:4, worker:5};
+  const list = [...S.accounts.entries()].filter(([,a]) => (admin || a.role==="worker") && ((a.role!=="admin" && a.role!=="director") || S.me.role==="admin")).sort((x,y) => order[x[1].role]-order[y[1].role] || x[1].name.localeCompare(y[1].name));
   const leads = [...S.accounts.values()].filter(a => a.role==="leader" && a.active), anyAssigned = leads.some(a => (a.machines||[]).length), orphan = anyAssigned && !leads.some(a => !(a.machines||[]).length) ? S.cfg.machines.filter(m => !leads.some(a => (a.machines||[]).includes(m.id))) : [];
   let h = '<div class="panel"><div class="row between"><h2>'+T("Quản lý tài khoản")+'</h2>'+(S.editAcc ? '' : '<button class="btn pri sm" data-acc="new">'+T("Tạo tài khoản")+'</button>')+'</div>'
     +'<div class="sub">'+T(admin ? "Admin tạo tài khoản tổ trưởng, tài khoản iPad cho từng máy và danh sách công nhân. Công nhân không đăng nhập: chọn tên và nhập mã PIN trên iPad." : "Bạn thêm công nhân và đặt mã PIN 4 số. Công nhân chọn tên và nhập PIN trên iPad của máy.")+'</div>'+(admin && orphan.length ? '<div class="alert">'+T("Máy chưa có tổ trưởng phụ trách (phiếu của máy này sẽ không ai duyệt): {l}",{l:orphan.map(m => mName(m.name)).join(", ")})+'</div>' : '');
@@ -2203,7 +2203,7 @@ async function saveAcc(){
   const machineId = role==="device" ? $("#accMachine").value : "";
   if(role==="device" && !machineId) return toast(T("Hãy chọn máy cho tài khoản iPad."));
   if(!admin && prev && prev.role!=="worker") return toast(T("Tổ trưởng chỉ sửa được tài khoản công nhân."));
-  if(S.me.role!=="admin" && ((prev && prev.role==="admin") || role==="admin")) return toast(T("Chỉ Admin sửa được tài khoản Admin."));
+  if(S.me.role!=="admin" && ((prev && (prev.role==="admin" || prev.role==="director")) || role==="admin" || role==="director")) return toast(T("Chỉ Admin sửa được tài khoản Admin."));
   const shifts = ["S","C"], machines = role==="leader" ? [...document.querySelectorAll("[data-accm]:checked")].map(x => x.dataset.accm) : (prev && !admin ? (prev.machines||[]) : []);
   if(role==="leader" && !machines.length) return toast(T("Hãy chọn ít nhất một máy tổ trưởng phụ trách."));
   const doc = {name:name, role:role, active:isNew ? true : $("#accActive").checked, machines:machines, shifts:shifts.length?shifts:["S","C"], machineId:machineId,
@@ -2221,10 +2221,10 @@ $("#tab-accounts").addEventListener("click", async e => {
   const b = e.target.closest("button[data-acc]"); if(!b || S.busy) return;
   const act = b.dataset.acc;
   if(act==="new"){ S.editAcc = "__new"; return renderAccounts(); }
-  if(act==="edit"){ const t = S.accounts.get(b.dataset.id); if(t && t.role==="admin" && S.me.role!=="admin") return; S.editAcc = b.dataset.id; return renderAccounts(); }
+  if(act==="edit"){ const t = S.accounts.get(b.dataset.id); if(t && (t.role==="admin" || t.role==="director") && S.me.role!=="admin") return; S.editAcc = b.dataset.id; return renderAccounts(); }
   if(act==="cancel"){ S.editAcc = null; return renderAccounts(); }
   if(act==="save") return saveAcc();
-  if(act==="del"){ const t = S.accounts.get(b.dataset.id); if(t && t.role==="admin" && S.me.role!=="admin") return;
+  if(act==="del"){ const t = S.accounts.get(b.dataset.id); if(t && (t.role==="admin" || t.role==="director") && S.me.role!=="admin") return;
     if(b.dataset.sure!=="1"){ b.dataset.sure="1"; b.textContent=T("Bấm lần nữa để xoá"); return; }
     S.busy = true; try{ await S.db.doc("accounts/"+b.dataset.id).delete(); toast(T("Đã xoá tài khoản.")); }catch(err){ toast(T("Chưa xoá được.")); } S.busy = false; }
 });
