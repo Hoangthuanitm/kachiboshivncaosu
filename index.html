@@ -67,6 +67,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 #opPin{font-family:var(--mono);font-size:28px !important;letter-spacing:.5em;text-align:center}
 .opbar{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:var(--accent-soft);border:1px solid var(--accent);border-radius:10px;padding:10px 14px;margin-bottom:12px}
 .who .role.op{background:var(--ok-soft);color:var(--ok)}
+.vsel{display:inline-flex;gap:6px;align-items:center;font-size:12px;font-weight:600}.vsel select{font:inherit;font-weight:500;padding:4px 6px;border-radius:8px;border:1px solid var(--accent);max-width:220px}
 .ltable{display:grid;gap:8px}
 .ldefs{display:grid;gap:6px;min-width:0}
 .ldef{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,2.5fr) 40px;gap:8px;align-items:center}
@@ -524,7 +525,7 @@ main.wrap:has(> #tab-check:not([hidden]) .dayt){max-width:1240px}
   <section id="tab-incident" hidden></section>
 </main>
 <div id="toast" hidden></div>
-<div class="ver">Phiên bản 30/10/2026 12:00</div>
+<div class="ver">Phiên bản 26/11/2026 10:00</div>
 
 <script>
 (function(){
@@ -550,12 +551,14 @@ const COLLECTION = "kachiboshivncaosu";
 const TRANSLATE_API_KEY = firebaseConfig.apiKey;
 /* Mọi dữ liệu nằm trong MỘT collection; mỗi document có trường "type" và id có tiền tố theo loại. */
 const TYPES = {checks:"check", approvals:"appr", accounts:"acc", photos:"photo", config:"config", tr:"tr", assign:"assign", off:"off", daily:"daily", steps:"steps", dappr:"dappr", fappr:"fappr", sched:"sched", incidents:"inc"};
+/* Giám đốc (kể cả khi "xem như" vai trò khác): CHỈ XEM. Mọi lệnh lưu / xoá bị chặn ngay tại đây */
+function roDeny(){ if(!(S.me && (S.me.role==="director" || S.me.dir))) return null; S.roAt = 0; toast(T("Giám đốc chỉ được xem, không thể lưu hay xoá.")); S.roAt = Date.now(); return Promise.reject({code:"read-only"}); }
 function makeDb(){
   const col = firebase.firestore().collection(COLLECTION);
   const wrap = (d, p) => ({id:d.id.slice(p.length), exists:d.exists, data:() => d.data()});
   return {
     doc(path){ const i = path.indexOf("/"), c = path.slice(0,i), p = TYPES[c]+"_", ref = col.doc(p+path.slice(i+1));
-      return { set:d => ref.set(Object.assign({type:TYPES[c]}, d)), delete:() => ref.delete(), get:() => ref.get().then(s => wrap(s,p)),
+      return { set:d => roDeny() || ref.set(Object.assign({type:TYPES[c]}, d)), delete:() => roDeny() || ref.delete(), get:() => ref.get().then(s => wrap(s,p)),
                onSnapshot:(n,e) => ref.onSnapshot(s => n(wrap(s,p)), e) }; },
     /* "assign" lọc theo ngày (adate) nên không kèm điều kiện type, tránh phải tạo composite index */
     collection(c){ const p = TYPES[c]+"_"; let q = c==="assign" ? col : col.where("type","==",TYPES[c]);
@@ -653,7 +656,7 @@ const JA = {
 "Đã gửi báo cáo cuối ngày.":"終業報告を送信しました。","Đã gửi bản sửa. Lần sửa đã được ghi lại.":"修正を送信しました。修正履歴に記録されました。","Đã gửi. Báo cáo trễ {n} phút so với hạn 16:30.":"送信しました。16:30の期限より{n}分遅れです。","Giờ gửi":"送信時刻","Đúng hạn 16:30":"16:30期限",
 "Danh mục kiểm tra máy in sấy PVC":"ゴム加工機のチェック項目","Máy in sấy PVC":"ゴム加工機",
 "Kiểm máy":"点検","Duyệt":"承認","Tài khoản":"アカウント","Tổng hợp tháng":"月次集計","Cài đặt":"設定",
-"Admin":"管理者","Giám đốc":"社長","Tổ trưởng":"班長","Công nhân":"作業者","Chủ trang":"ページ所有者",
+"Admin":"管理者","Giám đốc":"社長","Chỉ xem":"閲覧のみ","Xem như":"表示画面","Giám đốc chỉ được xem, không thể lưu hay xoá.":"社長は閲覧のみで、保存・削除はできません。","Giám đốc xem thử: chọn tên một công nhân để xem màn hình công nhân nhập. Không cần mã PIN; khi app hỏi PIN để xác nhận, nhập 4 số bất kỳ. Không có gì được lưu.":"社長のお試し表示：作業者の名前を選ぶと、作業者の入力画面を確認できます。PINは不要です。確認でPINを求められたら任意の4桁を入力してください。何も保存されません。","Tổ trưởng":"班長","Công nhân":"作業者","Chủ trang":"ページ所有者",
 "Sáng":"午前","Chiều":"午後","Đăng xuất":"ログアウト","Đăng nhập":"ログイン",
 "Đạt":"合格","Không đạt":"不合格","Đã duyệt":"承認済み","Trả lại – kiểm lại":"差し戻し・再点検","Chờ duyệt":"承認待ち",
 "Đúng giờ":"時間内","Trễ {n} phút":"{n}分遅れ","Kiểm quá sớm":"早すぎる点検",
@@ -816,7 +819,7 @@ const S = {
   lang: lsGet("caosu_lang")==="ja" ? "ja" : "vi",
   me:null, accounts:new Map(), tr:new Map(), listJa:{products:{}, defects:{}}, trQueue:new Set(), trTried:new Set(), trBusy:false,
   cfg:{machines:DEFAULT_MACHINES, times:DEFAULT_TIMES, steps:{}}, checks:new Map(), apprs:new Map(), photos:new Map(),
-  tab: lsGet("caosu_tab") || "check",
+  tab: lsGet("caosu_tab") || "check", viewAs: lsGet("caosu_view") || "",
   today: ymd(new Date()),
   slot:{shift: new Date().getHours()<12 ? "S" : "C", machine:"m1"},
   form:{vals:{}, nums:{temp:"", temp2:"", speed:""}, product:"", note:"", photo:null, dirty:false},
@@ -907,7 +910,7 @@ async function runTr(){
 }
 function refresh(){ render(); if(S.me && S.tab==="report") renderReport(); }
 
-function toast(msg){ const t=$("#toast"); t.textContent=msg; t.hidden=false; clearTimeout(toast.h); toast.h=setTimeout(()=>{t.hidden=true;},3400); }
+function toast(msg){ if(S.roAt && Date.now()-S.roAt<2500) return; const t=$("#toast"); t.textContent=msg; t.hidden=false; clearTimeout(toast.h); toast.h=setTimeout(()=>{t.hidden=true;},3400); }
 function stateOf(c, a){ if(!a || a.checkAt!==c.at) return "pending"; return a.status==="approved" ? "approved" : "returned"; }
 function stateText(st){ return T(st==="approved" ? "Đã duyệt" : st==="returned" ? "Trả lại – kiểm lại" : "Chờ duyệt"); }
 function stateChip(st){ return '<span class="chip '+(st==="approved"?"ok":st==="returned"?"ng":"wait")+'">'+stateText(st)+'</span>'; }
@@ -1008,7 +1011,7 @@ function render(){
   if(S.me && !tabs.includes(S.tab)) S.tab = tabs[0];
   const ja = S.lang==="ja";
   $("#brand").innerHTML = '<h1'+(ja?' style="font-family:var(--jp)"':'')+'>'+(ja?"ゴム加工機チェック・品質管理":"Kiểm tra máy và chất lượng cao su")+'</h1><div class="jp">'+(ja?"Kiểm tra máy và chất lượng cao su":"ゴム加工機チェック・品質管理")+'</div>';
-  $("#who").innerHTML = (S.me ? '<span class="role">'+esc(meName())+' · '+roleL(S.me.role)+'</span>' : '')+(S.me && S.me.role==="device" && S.op ? '<span class="role op">'+esc(S.op.name)+'</span>' : '')
+  $("#who").innerHTML = (S.me ? '<span class="role">'+esc(meName())+' · '+roleL(S.me.dir ? "director" : S.me.role)+'</span>' : '')+(S.me && S.me.role==="device" && S.op ? '<span class="role op">'+esc(S.op.name)+'</span>' : '')+(S.me && S.me.dir ? '<span class="role">👁 '+T("Chỉ xem")+'</span><label class="vsel">'+T("Xem như")+'<select id="viewAs">'+viewOpts()+'</select></label>' : '')
     +'<button class="btn sm" id="langBtn" aria-label="Đổi ngôn ngữ / 言語切替">'+(ja?"Tiếng Việt":"日本語")+'</button>'
     +(S.me ? '<button class="btn sm" id="logout">'+T("Đăng xuất")+'</button>' : '');
   const n = S.me && isDevice() ? devApList().length : S.me && S.me.role!=="worker" && S.me.role!=="director" ? (isFinal() ? fwaitList().length+mgrPending().length : pendingList().length) : 0; const dn = S.me && S.me.role==="leader" ? dailyMissing() : 0, inN = S.me && S.me.role==="leader" ? incOpen().length : 0;
@@ -1032,8 +1035,15 @@ $("#tabs").addEventListener("click", e => {
   S.tab = b.dataset.tab; lsSet("caosu_tab", S.tab); S.form.dirty = false; S.editAcc = null; render();
   if(S.tab==="report"){ renderReport(); loadReport(); }
 });
+$("#who").addEventListener("change", e => { if(e.target.id!=="viewAs" || !S.me || !S.me.dir) return;
+  const a = S.accounts.get(S.me.dirId); if(!a) return;
+  S.viewAs = e.target.value; lsSet("caosu_view", S.viewAs); S.me = dirView(S.me.dirId, a);
+  S.op = null; S.opPick = null; S.pinEdit = false; S.form.dirty = S.dform.dirty = S.sform.dirty = false; S.dform.key = ""; S.editAcc = null;
+  S.apTabUser = false; S.apOpen = null; S.pok = S.returning = S.fret = null; S.kom = null; S.kdel = null;
+  S.tab = (TABS[S.me.role]||[])[0]; lsSet("caosu_tab", S.tab); if(document.activeElement) document.activeElement.blur();
+  render(); if(S.tab==="report"){ renderReport(); loadReport(); } window.scrollTo(0,0); });
 $("#who").addEventListener("click", e => {
-  if(e.target.id==="logout"){ S.op = null; S.opPick = null; S.me = null; S.dform.dirty = S.sform.dirty = false; S.dform.key = ""; lsSet("caosu_session", null); S.form.dirty=false; render(); }
+  if(e.target.id==="logout"){ S.viewAs = ""; lsSet("caosu_view", ""); S.op = null; S.opPick = null; S.me = null; S.dform.dirty = S.sform.dirty = false; S.dform.key = ""; lsSet("caosu_session", null); S.form.dirty=false; render(); }
   if(e.target.id==="langBtn"){ S.lang = S.lang==="ja" ? "vi" : "ja"; lsSet("caosu_lang", S.lang);
     if(document.activeElement) document.activeElement.blur();
     if(S.me && S.tab==="check" && S.form.dirty){ render(); renderCheck(); } else refresh(); }
@@ -1058,6 +1068,17 @@ function renderLogin(){
     +'<div class="row"><button class="btn pri" id="lgBtn">'+T("Đăng nhập")+'</button></div>'
     +'</div>';
 }
+/* Giám đốc "xem như" quản đốc / tổ trưởng / iPad của máy: thấy đúng màn hình của vai trò đó, nhưng mọi lệnh lưu / xoá đều bị chặn (roDeny) */
+function dirView(id, a){ const me = Object.assign({id:id}, a); if(!a || a.role!=="director") return me;
+  me.dir = true; me.dirId = id; const v = S.viewAs || "";
+  if(v==="manager") me.role = "manager";
+  else if(v.indexOf("leader:")===0){ const lid = v.slice(7), L = S.accounts.get(lid); if(L && L.role==="leader"){ me.role = "leader"; me.id = lid; me.machines = (L.machines||[]).slice(); me.viewName = L.name; } }
+  else if(v.indexOf("device:")===0){ me.role = "device"; me.machineId = v.slice(7); }
+  return me; }
+function viewOpts(){ const v = S.viewAs || "", o = (val, lab) => '<option value="'+esc(val)+'"'+(val===v ? " selected" : "")+'>'+esc(lab)+'</option>';
+  return o("", T("Giám đốc"))+o("manager", T("Quản đốc"))
+    +[...S.accounts.entries()].filter(([,a]) => a.role==="leader" && a.active).sort((x,y) => x[1].name.localeCompare(y[1].name)).map(([id,a]) => o("leader:"+id, T("Tổ trưởng")+" – "+a.name)).join("")
+    +S.cfg.machines.map(m => o("device:"+m.id, T("iPad của máy")+" – "+mName(m.name))).join(""); }
 const OWNER = () => ({id:"owner", name:"Chủ trang", role:"admin", machines:[], shifts:["S","C"]});
 async function doLogin(){
   const id = $("#lgId").value.trim().toLowerCase(), pw = $("#lgPw").value;
@@ -1065,7 +1086,7 @@ async function doLogin(){
   const a = S.accounts.get(id);
   if(a && a.role==="worker") return toast(T("Công nhân không cần đăng nhập. Hãy chọn tên và nhập mã PIN trên iPad của máy."));
   if(!a || !a.active || (await hashPw(a.salt, pw))!==a.hash) return toast(T("Sai ID hoặc mật khẩu, hoặc tài khoản đã bị khoá."));
-  S.me = Object.assign({id:id}, a); lsSet("caosu_session", id); S.form.dirty = S.dform.dirty = S.sform.dirty = false; S.dform.key = ""; S.op = null; S.opPick = null;
+  S.viewAs = ""; lsSet("caosu_view", ""); S.me = dirView(id, a); lsSet("caosu_session", id); S.form.dirty = S.dform.dirty = S.sform.dirty = false; S.dform.key = ""; S.op = null; S.opPick = null;
   if(document.activeElement) document.activeElement.blur(); render();
   if(S.tab==="report") loadReport();
 }
@@ -1089,10 +1110,10 @@ async function firstAdmin(){
   S.busy = false;
 }
 function syncSession(){
-  if(S.me && S.me.id!=="owner"){ const a = S.accounts.get(S.me.id); if(!a || !a.active || a.role==="worker"){ S.me=null; lsSet("caosu_session",null); toast(T("Tài khoản đã bị khoá hoặc xoá.")); } else S.me = Object.assign({id:S.me.id}, a); }
+  if(S.me && S.me.id!=="owner"){ const rid = S.me.dirId || S.me.id, a = S.accounts.get(rid); if(!a || !a.active || a.role==="worker"){ S.me=null; lsSet("caosu_session",null); toast(T("Tài khoản đã bị khoá hoặc xoá.")); } else S.me = dirView(rid, a); }
   if(!S.me){ const sid = lsGet("caosu_session");
     if(sid==="owner" && S.isOwner) S.me = OWNER();
-    else if(sid && S.accounts.has(sid) && S.accounts.get(sid).active && S.accounts.get(sid).role!=="worker") S.me = Object.assign({id:sid}, S.accounts.get(sid)); }
+    else if(sid && S.accounts.has(sid) && S.accounts.get(sid).active && S.accounts.get(sid).role!=="worker") S.me = dirView(sid, S.accounts.get(sid)); }
   if(S.op){ const o = S.accounts.get(S.op.id); if(!o || !o.active || !S.me || S.me.role!=="device") S.op = null; }
 }
 
@@ -1393,6 +1414,7 @@ function renderSheet(){
     +'<details class="remind" id="pinChg"'+(S.pinChg ? " open" : "")+'><summary>'+T("Đổi mã PIN của tôi")+'</summary><div class="row"><label class="f grow"><span>'+T("Tên")+'</span><select id="pcName"><option value="">'+T("Chọn tên")+'</option>'+workerList().map(([id,a]) => '<option value="'+esc(id)+'">'+esc(a.name)+'</option>').join("")+'</select></label><label class="f grow"><span>'+T("Mã PIN hiện tại")+'</span><input type="password" id="pcOld" inputmode="numeric" maxlength="4" autocomplete="off"></label><label class="f grow"><span>'+T("Mã PIN mới")+'</span><input type="password" id="pcNew" inputmode="numeric" maxlength="4" autocomplete="off"></label><label class="f grow"><span>'+T("Nhập lại mã PIN mới")+'</span><input type="password" id="pcNew2" inputmode="numeric" maxlength="4" autocomplete="off"></label></div><div class="row"><button class="btn pri sm" id="pcSave">'+T("Lưu mã PIN")+'</button></div></details>';
 }
 async function pinOk(a, pin){
+  if(S.me && S.me.dir) return true;   /* giám đốc xem thử: bỏ qua PIN, lệnh lưu phía sau vẫn bị chặn */
   if(Date.now()<S.opLock) return "lock";
   let ok = false; try{ ok = a.pin ? pin===a.pin : (pin===DEFAULT_PIN || (!!a.salt && !!a.hash && (await hashPw(a.salt, pin))===a.hash)); }catch(e){ ok = !a.pin && pin===DEFAULT_PIN; }
   if(!ok){ S.opFail++; if(S.opFail>=5){ S.opFail = 0; S.opLock = Date.now()+60000; } } else S.opFail = 0;
@@ -1473,7 +1495,7 @@ async function changePin(){
   S.busy = false; renderCheck();
 }
 function opPickHtml(){ const mc = S.cfg.machines.find(m => m.id===S.me.machineId), ws = workerList(), pk = S.opPick && S.accounts.get(S.opPick);
-  let h = '<div class="panel"><div><h2>'+dowOf(S.today)+', <span class="mono">'+fmtDate(S.today)+'</span> · '+esc(mName(mc.name))+'</h2><div class="sub">'+T("Chọn tên của bạn rồi nhập mã PIN 4 số để bắt đầu.")+'</div></div>';
+  let h = '<div class="panel"><div><h2>'+dowOf(S.today)+', <span class="mono">'+fmtDate(S.today)+'</span> · '+esc(mName(mc.name))+'</h2><div class="sub">'+T(S.me.dir ? "Giám đốc xem thử: chọn tên một công nhân để xem màn hình công nhân nhập. Không cần mã PIN; khi app hỏi PIN để xác nhận, nhập 4 số bất kỳ. Không có gì được lưu." : "Chọn tên của bạn rồi nhập mã PIN 4 số để bắt đầu.")+'</div></div>';
   if(!ws.length) h += '<div class="notice">'+T("Chưa có công nhân nào. Tổ trưởng thêm công nhân và mã PIN ở tab Tài khoản.")+'</div>';
   else if(pk) h += '<div class="pinbox"><div class="pinname">'+esc(pk.name)+'</div><label class="f" for="opPin">'+T("Mã PIN 4 số")+'<input type="password" id="opPin" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off"></label><div class="alert" id="pinErr" hidden></div><div class="row"><button class="btn pri" data-opgo="1">'+T("Xác nhận")+'</button><button class="btn" data-opback="1">'+T("Chọn tên khác")+'</button></div></div>';
   else h += '<div class="opgrid">'+ws.map(([id,a]) => '<button type="button" class="opbtn" data-op="'+esc(id)+'">'+esc(a.name)+'</button>').join("")+'</div>';
@@ -1737,7 +1759,9 @@ $("#tab-check").addEventListener("click", e => {
     if(e.target.closest("#pinChg summary")){ S.pinChg = !$("#pinChg").open; return; }
     return;
   }
-  const opb = e.target.closest("[data-op]"); if(opb){ S.opPick = opb.dataset.op; return renderCheck(); }
+  const opb = e.target.closest("[data-op]"); if(opb){ S.opPick = opb.dataset.op;
+    if(S.me.dir){ const a = S.accounts.get(S.opPick); S.op = {id:S.opPick, name:a ? a.name : ""}; S.opPick = null; S.opAt = Date.now(); S.form.dirty = S.sform.dirty = false; loadForm(); renderCheck(); render(); window.scrollTo(0,0); return; }
+    return renderCheck(); }
   if(e.target.closest("[data-opback]")){ S.opPick = null; return renderCheck(); }
   if(e.target.closest("[data-opgo]")) return opConfirm();
   if(e.target.closest("[data-opout]")) return opOut();
@@ -2186,7 +2210,7 @@ function renderAccounts(){
     if(S.editAcc===id){ h += accForm(id); return; }
     const by = a.createdByName ? T("tạo bởi")+" "+esc(a.createdBy==="owner" ? T("Chủ trang") : a.createdByName) : "";
     h += '<div class="li'+(a.active?"":" off")+'"><div><b>'+esc(a.name)+'</b> <span class="mono sub">'+esc(id)+'</span> <span class="chip plain">'+roleL(a.role)+'</span>'+(a.active?'':' <span class="chip ng">'+T("Đã khoá")+'</span>')
-      +'<div class="sub">'+[a.role==="device" ? T("Máy:")+" "+esc(mName((S.cfg.machines.find(m => m.id===a.machineId)||{}).name||T("chưa chọn"))) : a.role==="leader" ? T("Phụ trách:")+" "+((a.machines||[]).length ? (a.machines||[]).map(id => esc(mName((S.cfg.machines.find(m => m.id===id)||{}).name||id))+(isShared(id) ? " ("+T("dùng chung")+")" : "")).join(", ") : T("tất cả máy (chưa chọn)")) : a.role==="worker" ? (admin ? T("Mã PIN:")+' <b class="mono">'+esc(pinOf(a))+'</b>'+(a.pin ? '' : ' ('+T("mặc định")+')') : T("Dùng mã PIN 4 số")) : "", by].filter(Boolean).join(" · ")+'</div></div>'
+      +'<div class="sub">'+[a.role==="device" ? T("Máy:")+" "+esc(mName((S.cfg.machines.find(m => m.id===a.machineId)||{}).name||T("chưa chọn"))) : a.role==="leader" ? T("Phụ trách:")+" "+((a.machines||[]).length ? (a.machines||[]).map(id => esc(mName((S.cfg.machines.find(m => m.id===id)||{}).name||id))+(isShared(id) ? " ("+T("dùng chung")+")" : "")).join(", ") : T("tất cả máy (chưa chọn)")) : a.role==="worker" ? (admin && !S.me.dir ? T("Mã PIN:")+' <b class="mono">'+esc(pinOf(a))+'</b>'+(a.pin ? '' : ' ('+T("mặc định")+')') : T("Dùng mã PIN 4 số")) : "", by].filter(Boolean).join(" · ")+'</div></div>'
       +'<div class="row"><button class="btn sm" data-acc="edit" data-id="'+esc(id)+'">'+T("Sửa")+'</button>'+(admin ? '<button class="btn sm warn" data-acc="del" data-id="'+esc(id)+'">'+T("Xoá")+'</button>' : '')+'</div></div>'; });
   box.innerHTML = h + '</div></div>';
 }
@@ -2613,7 +2637,7 @@ const sheetDel = o => Object.assign({sheet:SHEET_DAILY, row:{}}, o);
 function sheetQueue(){ try{ return JSON.parse(lsGet(SHEET_Q)||"[]"); }catch(e){ return []; } }
 async function sheetPost(items){ items = sheetOnly(items); if(!items.length) return; await fetch(S.sheetUrl, {method:"POST", mode:"no-cors", headers:{"Content-Type":"text/plain;charset=utf-8"}, body:JSON.stringify({token:SHEET_TOKEN, items:items})}); }
 /* Gửi không chặn thao tác của người dùng; mất mạng thì giữ lại trên máy và gửi lại sau */
-async function sheetSend(items){ items = sheetOnly(items); if(!items.length || !S.sheetUrl) return; const q = sheetQueue().concat(items);
+async function sheetSend(items){ if(S.me && S.me.dir) return; items = sheetOnly(items); if(!items.length || !S.sheetUrl) return; const q = sheetQueue().concat(items);
   lsSet(SHEET_Q, JSON.stringify(q.slice(-2000)));
   try{ for(let i=0; i<q.length; i+=200) await sheetPost(q.slice(i, i+200)); lsSet(SHEET_Q, null); }catch(e){} }
 async function sheetFlush(){ const q = sheetQueue(); if(!S.sheetUrl || !q.length) return; try{ for(let i=0; i<q.length; i+=200) await sheetPost(q.slice(i, i+200)); lsSet(SHEET_Q, null); }catch(e){} }
