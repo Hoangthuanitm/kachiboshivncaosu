@@ -498,6 +498,20 @@ html,body{max-width:100%;overflow-x:clip}
 .dayt .apbtn .btn.sm{min-height:34px;padding:4px 12px}
 main.wrap:has(> #tab-check:not([hidden]) .dayt){max-width:1240px}
 .deflist>div{padding:2px 0}.deflist>div+div{border-top:1px dashed rgba(0,0,0,.15);margin-top:2px;padding-top:4px}
+/* Hướng dẫn cho giám đốc */
+.gd-sum{background:var(--accent-soft);border-radius:8px;padding:12px 14px;font-size:14px;line-height:1.6}
+.gd-flow{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:13px;font-weight:600}
+.gd-flow span{background:var(--accent-soft);color:var(--accent);border-radius:999px;padding:4px 10px}
+.gd-flow i{font-style:normal;color:var(--muted)}
+.gd-steps{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.gd-steps li{display:grid;grid-template-columns:30px 1fr;gap:10px;align-items:start}
+.gd-steps .n{width:30px;height:30px;border-radius:50%;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-weight:700;font-size:14px}
+.gd-steps b{display:block;font-size:14px}
+.gd-steps .d{color:var(--muted);font-size:13px;line-height:1.55}
+.gd-roles{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px}
+.gd-roles div{border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:13px;line-height:1.5}
+.gd-roles b{display:block;font-size:14px;margin-bottom:2px}
+.gd-wrap.ja{font-family:var(--jp)}
 </style>
 
 </head>
@@ -514,6 +528,7 @@ main.wrap:has(> #tab-check:not([hidden]) .dayt){max-width:1240px}
 
 <main class="wrap">
   <section id="login"></section>
+  <section id="tab-guide" hidden></section>
   <section id="tab-check" hidden></section>
   <section id="tab-daily" hidden></section>
   <section id="tab-approve" hidden></section>
@@ -525,7 +540,7 @@ main.wrap:has(> #tab-check:not([hidden]) .dayt){max-width:1240px}
   <section id="tab-incident" hidden></section>
 </main>
 <div id="toast" hidden></div>
-<div class="ver">Phiên bản 26/11/2026 10:00</div>
+<div class="ver">Phiên bản 26/11/2026 15:30</div>
 
 <script>
 (function(){
@@ -604,8 +619,8 @@ const DOW = {vi:["Chủ nhật","Thứ hai","Thứ ba","Thứ tư","Thứ năm",
 const DEFAULT_TIMES = {S:{from:"06:00", due:"07:30"}, QS:{from:"06:30", due:"08:10"}, C:{from:"12:00", due:"13:00"}, QC:{from:"12:00", due:"13:20"}};
 const DEFAULT_MACHINES = [{id:"m1", name:"Cao su 1"}, {id:"m2", name:"Cao su 2"}, {id:"m3", name:"Cao su 3"}];
 /* Chỉ tổ trưởng duyệt phiếu. Admin phân công, quản lý tài khoản, xem tổng hợp và cài đặt. */
-const TABS = {admin:["approve","accounts","report","settings"], manager:["approve","daily","accounts","report","settings"], leader:["approve","daily","incident","report","times"], device:["check"], worker:[], director:["approve","report"]};
-const TAB_LABEL = {daily:"Báo cáo sản xuất", check:"Kiểm máy", approve:"Duyệt", assign:"Phân công", accounts:"Tài khoản", report:"Tổng hợp tháng", settings:"Cài đặt", times:"Giờ quy định", incident:"Báo cáo sự cố"};
+const TABS = {admin:["approve","accounts","report","settings"], manager:["approve","daily","accounts","report","settings"], leader:["approve","daily","incident","report","times"], device:["check"], worker:[], director:["guide","approve","report"]};
+const TAB_LABEL = {guide:"Hướng dẫn", daily:"Báo cáo sản xuất", check:"Kiểm máy", approve:"Duyệt", assign:"Phân công", accounts:"Tài khoản", report:"Tổng hợp tháng", settings:"Cài đặt", times:"Giờ quy định", incident:"Báo cáo sự cố"};
 const ROLE_LABEL = {admin:"Admin", manager:"Quản đốc", leader:"Tổ trưởng", device:"iPad của máy", worker:"Công nhân", director:"Giám đốc"};
 
 /* Japanese UI text, keyed by the Vietnamese original */
@@ -656,7 +671,7 @@ const JA = {
 "Đã gửi báo cáo cuối ngày.":"終業報告を送信しました。","Đã gửi bản sửa. Lần sửa đã được ghi lại.":"修正を送信しました。修正履歴に記録されました。","Đã gửi. Báo cáo trễ {n} phút so với hạn 16:30.":"送信しました。16:30の期限より{n}分遅れです。","Giờ gửi":"送信時刻","Đúng hạn 16:30":"16:30期限",
 "Danh mục kiểm tra máy in sấy PVC":"ゴム加工機のチェック項目","Máy in sấy PVC":"ゴム加工機",
 "Kiểm máy":"点検","Duyệt":"承認","Tài khoản":"アカウント","Tổng hợp tháng":"月次集計","Cài đặt":"設定",
-"Admin":"管理者","Giám đốc":"社長","Chỉ xem":"閲覧のみ","Xem như":"表示画面","Giám đốc chỉ được xem, không thể lưu hay xoá.":"社長は閲覧のみで、保存・削除はできません。","Giám đốc xem thử: chọn tên một công nhân để xem màn hình công nhân nhập. Không cần mã PIN; khi app hỏi PIN để xác nhận, nhập 4 số bất kỳ. Không có gì được lưu.":"社長のお試し表示：作業者の名前を選ぶと、作業者の入力画面を確認できます。PINは不要です。確認でPINを求められたら任意の4桁を入力してください。何も保存されません。","Tổ trưởng":"班長","Công nhân":"作業者","Chủ trang":"ページ所有者",
+"Admin":"管理者","Giám đốc":"社長","Hướng dẫn":"使い方","Chỉ xem":"閲覧のみ","Xem như":"表示画面","Giám đốc chỉ được xem, không thể lưu hay xoá.":"社長は閲覧のみで、保存・削除はできません。","Giám đốc xem thử: chọn tên một công nhân để xem màn hình công nhân nhập. Không cần mã PIN; khi app hỏi PIN để xác nhận, nhập 4 số bất kỳ. Không có gì được lưu.":"社長のお試し表示：作業者の名前を選ぶと、作業者の入力画面を確認できます。PINは不要です。確認でPINを求められたら任意の4桁を入力してください。何も保存されません。","Tổ trưởng":"班長","Công nhân":"作業者","Chủ trang":"ページ所有者",
 "Sáng":"午前","Chiều":"午後","Đăng xuất":"ログアウト","Đăng nhập":"ログイン",
 "Đạt":"合格","Không đạt":"不合格","Đã duyệt":"承認済み","Trả lại – kiểm lại":"差し戻し・再点検","Chờ duyệt":"承認待ち",
 "Đúng giờ":"時間内","Trễ {n} phút":"{n}分遅れ","Kiểm quá sớm":"早すぎる点検",
@@ -1017,7 +1032,8 @@ function render(){
   const n = S.me && isDevice() ? devApList().length : S.me && S.me.role!=="worker" && S.me.role!=="director" ? (isFinal() ? fwaitList().length+mgrPending().length : pendingList().length) : 0; const dn = S.me && S.me.role==="leader" ? dailyMissing() : 0, inN = S.me && S.me.role==="leader" ? incOpen().length : 0;
   $("#tabs").innerHTML = tabs.map(t => '<button role="tab" data-tab="'+t+'" aria-selected="'+(S.tab===t)+'">'+T(t==="approve" && (S.me.role==="admin" || S.me.role==="director") ? "Theo dõi duyệt" : t==="daily" && S.me.role==="manager" ? "Báo cáo bổ sung" : TAB_LABEL[t])+(t==="approve"&&n?'<span class="badge">'+n+'</span>':t==="daily"&&dn?'<span class="badge">'+dn+'</span>':t==="incident"&&inN?'<span class="badge">'+inN+'</span>':'')+'</button>').join("");
   $("#login").hidden = !!S.me;
-  ["check","daily","approve","assign","accounts","report","settings","times","incident"].forEach(t => { $("#tab-"+t).hidden = !S.me || S.tab!==t; });
+  ["guide","check","daily","approve","assign","accounts","report","settings","times","incident"].forEach(t => { $("#tab-"+t).hidden = !S.me || S.tab!==t; });
+  if(S.me && S.tab==="guide") renderGuide();
   /* iPad: Báo cáo sản xuất hiện ngay dưới phần Kiểm máy khi chọn tab nhỏ "Báo cáo sản xuất" */
   if(S.me && isDevice() && S.tab==="check" && S.devTab==="D"){ $("#tab-daily").hidden = false; if(!typingIn("#tab-daily")) renderDaily(); }
   if(!S.me){ if(!typingIn("#login")) renderLogin(); return; }
@@ -1048,6 +1064,54 @@ $("#who").addEventListener("click", e => {
     if(document.activeElement) document.activeElement.blur();
     if(S.me && S.tab==="check" && S.form.dirty){ render(); renderCheck(); } else refresh(); }
 });
+
+/* ---------- Hướng dẫn quy trình (chỉ giám đốc thấy) ---------- */
+function renderGuide(){
+  const ja = S.lang==="ja", t = baseTimes(), L = (v, j) => ja ? j : v;
+  const flow = arr => '<div class="gd-flow">'+arr.map(x => '<span>'+x+'</span>').join('<i>→</i>')+'</div>';
+  const steps = arr => '<ol class="gd-steps">'+arr.map((x,i) => '<li><span class="n">'+(i+1)+'</span><div><b>'+x[0]+'</b><div class="d">'+x[1]+'</div></div></li>').join("")+'</ol>';
+  const grid = arr => '<div class="gd-roles">'+arr.map(r => '<div><b>'+r[0]+'</b>'+r[1]+'</div>').join("")+'</div>';
+  const mc = L("Nhập nhiệt độ và tốc độ băng chuyền (máy có khoảng chuẩn thì app tự đánh giá OK/×).", "温度とコンベアスピードを入力（基準範囲がある機械は自動でOK/×判定）。");
+  const qc = L("Chọn tên sản phẩm, đánh giá OK/× cho kích thước găng tay, đeo thử và lớp cao su, chụp ảnh sản phẩm (bắt buộc).", "製品名を選び、寸法・着用・ゴム品質をOK/×で評価し、製品写真を撮ります（必須）。");
+  const day = [
+    [L("Kiểm máy sáng – trước "+t.S, "午前の機械点検 – "+t.S+"まで"), L("Trước khi in sấy. ", "加工を始める前に。")+mc],
+    [L("Kiểm chất lượng sáng – trước "+t.QS, "午前の品質チェック – "+t.QS+"まで"), qc],
+    [L("Kiểm máy chiều – trước "+t.C, "午後の機械点検 – "+t.C+"まで"), L("Sau giờ nghỉ trưa. ", "昼休み明けに。")+mc],
+    [L("Kiểm chất lượng chiều – trước "+t.QC, "午後の品質チェック – "+t.QC+"まで"), qc],
+    [L("Báo cáo sản xuất – trước 20:00", "生産報告 – 20:00まで"),
+     L("Theo từng sản phẩm: sản lượng thực tế và hàng loại 2 kèm nguyên nhân. App tự tính tổng và tỷ lệ loại 2. Tổ trưởng nhập trên điện thoại, hoặc nhập ngay trên iPad (tab nhỏ “Báo cáo sản xuất”).", "製品ごとに実生産数とB品・原因を入力。合計とB品率は自動計算。班長がスマホで入力、またはiPadの「生産報告」タブで入力します。")]
+  ];
+  const appr = [
+    [L("Tổ trưởng duyệt", "班長が承認"),
+     L("Phiếu kiểm máy và kiểm chất lượng: Đạt → Duyệt; có × → ghi biện pháp đã xử lý; sai → Trả lại để công nhân kiểm lại. Báo cáo sản xuất: tổ trưởng xác nhận rồi gửi quản đốc.", "機械点検・品質チェック：合格なら承認、×があれば実施した対策を記入、誤りは差し戻し（作業者が再点検）。生産報告：班長が確認して工場長へ送ります。")],
+    [L("Quản đốc duyệt cuối", "工場長が最終承認"),
+     L("Duyệt cuối các phiếu và báo cáo sản xuất. Không đồng ý → trả lại cho tổ trưởng.", "各記録と生産報告を最終承認。不可の場合は班長に差し戻します。")]
+  ];
+  const roles = [
+    [L("Công nhân","作業者"), L("Không cần đăng nhập. Thao tác trên iPad của máy: chọn tên + mã PIN 4 số.","ログイン不要。機械のiPadで名前を選び、4桁のPINで操作します。")],
+    [L("iPad của máy","機械のiPad"), L("Mỗi máy một iPad, có sẵn các tab: Kiểm sáng (2 phiếu), Kiểm chiều (2 phiếu), Báo cáo sản xuất.","1台の機械に1台のiPad。午前点検（2件）・午後点検（2件）・生産報告のタブがあります。")],
+    [L("Tổ trưởng","班長"), L("Duyệt phiếu, nhập báo cáo sản xuất, ghi sự cố máy (giờ hư, giờ sửa xong → app tính thời gian dừng máy), chỉnh giờ quy định khi ngày đó đổi giờ.","点検記録の承認、生産報告の入力、故障記録（故障・修理完了時刻から停止時間を自動計算）、時刻変更日の規定時刻調整。")],
+    [L("Quản đốc","工場長"), L("Duyệt cuối; nhập bổ sung báo cáo sản xuất khi tổ trưởng quên.","最終承認。班長が忘れた生産報告を追加入力します。")],
+    [L("Admin","管理者"), L("Tạo tài khoản, cài máy, khoảng chuẩn nhiệt độ / tốc độ, danh sách sản phẩm, giờ chuẩn.","アカウント作成、機械・温度/速度の基準範囲・製品リスト・標準時刻の設定。")],
+    [L("Giám đốc","社長"), L("Chỉ xem toàn bộ, không lưu / sửa / xoá được gì.","すべて閲覧のみ。保存・編集・削除はできません。")]
+  ];
+  const see = [
+    [T("Theo dõi duyệt"), L("Tiến độ từng máy trong ngày (4 phiếu), phiếu nào đang chờ tổ trưởng, chờ quản đốc, bị trả lại hay đã duyệt; xem ảnh sản phẩm.","機械ごとの当日の進捗（4件）、班長待ち・工場長待ち・差し戻し・承認済みの状況、製品写真。")],
+    [T("Tổng hợp tháng"), L("Bảng theo ngày, đúng giờ / trễ, sản lượng và tỷ lệ loại 2; xuất Excel.","日別の表、時間内／遅れ、生産数とB品率。Excel出力。")],
+    [T("Xem như"), L("Ô chọn trên đầu trang: xem đúng màn hình của quản đốc, tổ trưởng hoặc iPad từng máy – chỉ xem, không lưu.","画面上部の選択欄：工場長・班長・各機械のiPadの画面をそのまま確認できます（閲覧のみ）。")]
+  ];
+  $("#tab-guide").innerHTML = '<div class="gd-wrap'+(ja?' ja':'')+'" style="display:flex;flex-direction:column;gap:14px">'
+    +'<div class="panel"><h2>'+L("Tóm tắt để giải thích cho khách hàng","お客様への説明（要約）")+'</h2>'
+    +'<div class="gd-sum">'+L("App thay cho sổ giấy kiểm tra máy và chất lượng sản phẩm cao su. Mỗi máy có một iPad. Mỗi ngày công nhân làm <b>4 phiếu</b>: <b>kiểm máy</b> (nhiệt độ, tốc độ) và <b>kiểm chất lượng sản phẩm</b> (kích thước, đeo thử, lớp cao su, có ảnh) – buổi sáng và buổi chiều; cuối ngày nhập <b>báo cáo sản xuất</b> (sản lượng, hàng loại 2). Mọi phiếu được <b>tổ trưởng duyệt</b> rồi <b>quản đốc duyệt cuối</b>. App tự ghi giờ, tự báo trễ, ai làm – ai duyệt đều có tên; tổng hợp tháng và xuất Excel được.",
+      "ゴム加工機の点検と製品品質の紙の記録に代わるアプリです。各機械にiPadを1台設置。作業者は毎日<b>4件の記録</b>を行います：<b>機械点検</b>（温度・速度）と<b>製品の品質チェック</b>（寸法・着用・ゴム品質、写真付き）を午前と午後に。終業時に<b>生産報告</b>（生産数・B品）を入力します。すべての記録は<b>班長が承認</b>し、<b>工場長が最終承認</b>します。時刻と遅れは自動記録され、担当者・承認者の名前が残り、月次集計とExcel出力ができます。")+'</div>'
+    +flow([L("Kiểm máy sáng","午前機械点検"), L("Chất lượng sáng","午前品質"), L("Kiểm máy chiều","午後機械点検"), L("Chất lượng chiều","午後品質"), L("Báo cáo sản xuất","生産報告"), L("Tổ trưởng duyệt","班長承認"), L("Quản đốc duyệt cuối","工場長最終承認")])+'</div>'
+    +'<div class="panel"><h2>'+L("1. Thứ tự nhập mỗi ngày (trên iPad của máy)","1. 毎日の入力順序（機械のiPad）")+'</h2>'+steps(day)
+    +'<div class="notice">'+L("Mỗi phiếu: người kiểm chọn tên, nhập PIN, bấm Xác nhận. Có ×: bắt buộc ghi chú; máy bất thường → ngưng và báo cơ điện, sản phẩm bất thường → ngưng và báo tổ trưởng. App tự đánh dấu Đúng giờ / Trễ; hôm nào đổi giờ, tổ trưởng chỉnh ở tab “Giờ quy định”.","各記録は点検者が名前を選びPINを入力して確認。×の場合は備考が必須。機械の異常は作業を中止して保全担当へ、製品の異常は作業を中止して班長へ報告。「時間内／遅れ」は自動表示。時刻が変わる日は班長が「規定時刻」タブで調整します。")+'</div></div>'
+    +'<div class="panel"><h2>'+L("2. Duyệt 2 cấp","2. 2段階の承認")+'</h2>'+steps(appr)
+    +'<div class="sub">'+L("Duyệt trên điện thoại (đăng nhập tài khoản), hoặc ngay trên iPad của máy bằng mật khẩu của mình.","スマホでログインして承認するか、機械のiPadで自分のパスワードを入力して承認します。")+'</div></div>'
+    +'<div class="panel"><h2>'+L("3. Ai làm gì","3. 役割")+'</h2>'+grid(roles)+'</div>'
+    +'<div class="panel"><h2>'+L("4. Giám đốc xem ở đâu","4. 社長の確認場所")+'</h2>'+grid(see)+'</div></div>';
+}
 
 /* ---------- login ---------- */
 function renderLogin(){
